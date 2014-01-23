@@ -1,0 +1,12 @@
+Well organized.
+
+easy to use:
+
+	creating geometry, textures, and cameras is easy and fast.  modifying them is also easy and fast.
+
+	Website has many well-documented examples.
+
+	png transparent textures enabled with a simple material flag
+
+
+
