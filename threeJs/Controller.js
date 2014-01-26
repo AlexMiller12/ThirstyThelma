@@ -1,24 +1,31 @@
-
-//function controller(){
 //-----------------------------------------------------------------FIELDS:
-var ourEngine = [];
+
+var ourEngine = []; //Works as aggregator
 
 
 
 //--------------------------------------------------------------FUNCTIONS:
-
+/*
+ * Sets up Camera, Scene, and Renderer
+ */
 var init = function () {
+	//Init Scene
 	ourEngine.scene = new THREE.Scene();
-	ourEngine.camera = new THREE.PerspectiveCamera(75, //FOVY
-										 window.innerWidth/window.innerHeight, //ASPECT
-										 0.1, //CLIP NEAR
-										 1000); //CLIP FAR
+	
+	//Init Camera
+	ourEngine.camera = new THREE.PerspectiveCamera(
+										75, //FOVY
+										window.innerWidth/window.innerHeight, //ASPECT
+										0.1, //CLIP NEAR
+										1000); //CLIP FAR
 	ourEngine.camera.position.set(0,0,7);
-	//ourEngine.camera.lookAt(ourEngine.scene.position);
+	//Init Renderer
 	ourEngine.renderer = new THREE.WebGLRenderer();
 	ourEngine.renderer.setSize(window.innerWidth, window.innerHeight);
+	//Add renderer to HTML document (It is a <canvas> element)
 	document.body.appendChild(ourEngine.renderer.domElement);
-	//ourEngine.camera.position.z = 5; //TODO change!
+
+	//Create Model
 	ourEngine.model = new GameModel();
 	var uniforms = { texture: { type: "t", value: THREE.ImageUtils.loadTexture( "Tear.png" ) } };
 	ourEngine.ourShader = new THREE.ShaderMaterial({
@@ -27,6 +34,8 @@ var init = function () {
 		vertexShader: document.getElementById("VertexShader").innerHTML,
 		fragmentShader: document.getElementById("FragmentShader").innerHTML
 	});
+
+	drawScene();
 }
 
 var drawScene = function () {
@@ -35,17 +44,11 @@ var drawScene = function () {
 	ourEngine.renderer.render(ourEngine.scene, ourEngine.camera);
 };
 
-//TEMP:
-// var geometry = new THREE.PlaneGeometry(1,1,1);	
-// var material = new THREE.MeshBasicMaterial({color: 0x00ff00});
-// var cube = new THREE.Mesh(geometry, material);
-// scene.add(cube);
-
-
-
 init();
-drawScene();
 
+/*
+ * Key listener
+ */
 window.onkeydown = function(e) {
 
 	var key = e.keyCode ? e.keyCode : e.which;

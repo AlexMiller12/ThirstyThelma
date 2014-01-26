@@ -14,28 +14,6 @@ var scaledTearSize, scaledThelmaSize;
 
 //--------------------------------------------------------------FUNCTIONS:
 
-function drawThelma(thelma) {
-    
-    var thelmaPos = vec3.clone(thelma.position);
-    mat4.identity(mvMatrix);
-    vec3.scale(thelmaPos, thelmaPos, SCALE_FACTOR);
-
-    mat4.scale(mvMatrix, mvMatrix, scaledThelmaSize); // TODO SCALE VAR
-    mat4.translate(mvMatrix, mvMatrix, thelmaPos);
-
-    //draw jaw
-    drawSquare(jawTexture);
-    //adjust head if eating/finished eating tear
-    if (thelma.framesToChew > 0) {
-        mat4.translate(mvMatrix, mvMatrix, vec3.fromValues(0, CHOMP_DISTANCE, 0));
-    }
-    else if (thelma.framesToChew === 0) {
-        mat4.translate(mvMatrix, mvMatrix, vec3.fromValues(0, -CHOMP_DISTANCE, 0));
-    }
-    //draw head
-    drawSquare(headTexture); 
-}
-
 function drawScene(model) {
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -64,17 +42,6 @@ function drawSquare(texture) {
                   squareVertexPositionBuffer.numItems);
 }
 
-function drawTears(model) {
-
-    var tears = model.tears;
-   
-    var i;
-    for (i = 0; i < model.numTears; i++) {
-
-        transformTear(tears[i]);
-        drawSquare(tearTexture);
-    }
-}
 
 function getShader(gl, id) {
 
@@ -110,6 +77,40 @@ function getShader(gl, id) {
         return null;
     }
     return shader;
+}
+
+function drawTears(model) {
+
+    var tears = model.tears;
+   
+    var i;
+    for (i = 0; i < model.numTears; i++) {
+
+        transformTear(tears[i]);
+        drawSquare(tearTexture);
+    }
+}
+
+function drawThelma(thelma) {
+    
+    var thelmaPos = vec3.clone(thelma.position);
+    mat4.identity(mvMatrix);
+    vec3.scale(thelmaPos, thelmaPos, SCALE_FACTOR);
+
+    mat4.scale(mvMatrix, mvMatrix, scaledThelmaSize); // TODO SCALE VAR
+    mat4.translate(mvMatrix, mvMatrix, thelmaPos);
+
+    //draw jaw
+    drawSquare(jawTexture);
+    //adjust head if eating/finished eating tear
+    if (thelma.framesToChew > 0) {
+        mat4.translate(mvMatrix, mvMatrix, vec3.fromValues(0, CHOMP_DISTANCE, 0));
+    }
+    else if (thelma.framesToChew === 0) {
+        mat4.translate(mvMatrix, mvMatrix, vec3.fromValues(0, -CHOMP_DISTANCE, 0));
+    }
+    //draw head
+    drawSquare(headTexture); 
 }
 
 function handleTextureLoaded(image, texture) {
@@ -245,11 +246,13 @@ function webGLStart(model) {
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.enable(gl.DEPTH_TEST);
     gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
-    mat4.perspective(pMatrix, Math.PI / 4, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0);
+    mat4.perspective(pMatrix, Math.PI / 4, 
+                     gl.viewportWidth / gl.viewportHeight, 
+                     0.1, 100.0);
     mat4.lookAt(mvMatrix, 
-             vec3.fromValues(0,0,7),
-             vec3.fromValues(0,0,0),
-             vec3.fromValues(0,1,0));
+                vec3.fromValues(0,0,7),
+                vec3.fromValues(0,0,0),
+                vec3.fromValues(0,1,0));
     mat4.mul(pMatrix, pMatrix, mvMatrix);
 }
 
