@@ -42,7 +42,44 @@ function drawSquare(texture) {
                   squareVertexPositionBuffer.numItems);
 }
 
+function drawTears(model) {
 
+    var tears = model.tears;
+   
+    var i;
+    for (i = 0; i < model.numTears; i++) {
+
+        transformTear(tears[i]);
+        drawSquare(tearTexture);
+    }
+}
+
+function drawThelma(thelma) {
+    
+    var thelmaPos = vec3.clone(thelma.position);
+    mat4.identity(mvMatrix);
+    vec3.scale(thelmaPos, thelmaPos, SCALE_FACTOR);
+
+    mat4.scale(mvMatrix, mvMatrix, scaledThelmaSize); // TODO SCALE VAR
+    mat4.translate(mvMatrix, mvMatrix, thelmaPos);
+
+    //draw jaw
+    drawSquare(jawTexture);
+    //adjust head if eating/finished eating tear
+    if (thelma.framesToChew > 0) {
+        mat4.translate(mvMatrix, mvMatrix, vec3.fromValues(0, CHOMP_DISTANCE, 0));
+    }
+    else if (thelma.framesToChew === 0) {
+        mat4.translate(mvMatrix, mvMatrix, vec3.fromValues(0, -CHOMP_DISTANCE, 0));
+    }
+    //draw head
+    drawSquare(headTexture); 
+}
+
+/*
+ * gl - canvas context
+ * id - DOM id of the shader
+ */
 function getShader(gl, id) {
 
     var shader;
@@ -77,40 +114,6 @@ function getShader(gl, id) {
         return null;
     }
     return shader;
-}
-
-function drawTears(model) {
-
-    var tears = model.tears;
-   
-    var i;
-    for (i = 0; i < model.numTears; i++) {
-
-        transformTear(tears[i]);
-        drawSquare(tearTexture);
-    }
-}
-
-function drawThelma(thelma) {
-    
-    var thelmaPos = vec3.clone(thelma.position);
-    mat4.identity(mvMatrix);
-    vec3.scale(thelmaPos, thelmaPos, SCALE_FACTOR);
-
-    mat4.scale(mvMatrix, mvMatrix, scaledThelmaSize); // TODO SCALE VAR
-    mat4.translate(mvMatrix, mvMatrix, thelmaPos);
-
-    //draw jaw
-    drawSquare(jawTexture);
-    //adjust head if eating/finished eating tear
-    if (thelma.framesToChew > 0) {
-        mat4.translate(mvMatrix, mvMatrix, vec3.fromValues(0, CHOMP_DISTANCE, 0));
-    }
-    else if (thelma.framesToChew === 0) {
-        mat4.translate(mvMatrix, mvMatrix, vec3.fromValues(0, -CHOMP_DISTANCE, 0));
-    }
-    //draw head
-    drawSquare(headTexture); 
 }
 
 function handleTextureLoaded(image, texture) {
@@ -223,15 +226,15 @@ function setMatrixUniforms() {
 
 function transformTear(tear) {
 
-        var tearPos = vec3.clone(tear.position);
+    var tearPos = vec3.clone(tear.position);
 
-        mat4.identity(mvMatrix);
-        vec3.scale(tearPos,tearPos,SCALE_FACTOR);
-        
-        mat4.rotate(mvMatrix, mvMatrix, tear.rotation * Math.PI / 180, vec3.fromValues(0,1,0))
-        mat4.rotate(mvMatrix, mvMatrix, tear.rotation, vec3.fromValues(0,1,0))        
-        mat4.scale(mvMatrix, mvMatrix, scaledTearSize); 
-        mat4.translate(mvMatrix, mvMatrix, tearPos);
+    mat4.identity(mvMatrix);
+    vec3.scale(tearPos,tearPos,SCALE_FACTOR);
+    
+    mat4.rotate(mvMatrix, mvMatrix, tear.rotation * Math.PI / 180, vec3.fromValues(0,1,0))
+    mat4.rotate(mvMatrix, mvMatrix, tear.rotation, vec3.fromValues(0,1,0))        
+    mat4.scale(mvMatrix, mvMatrix, scaledTearSize); 
+    mat4.translate(mvMatrix, mvMatrix, tearPos);
 }
 
 function webGLStart(model) {
@@ -244,7 +247,9 @@ function webGLStart(model) {
     setDimensions(model);
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
-    gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.DEPTH_TEST); //set in renderObjects or renderObjectImmediate...
+
+    // This is work for a Camera class!
     gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
     mat4.perspective(pMatrix, Math.PI / 4, 
                      gl.viewportWidth / gl.viewportHeight, 

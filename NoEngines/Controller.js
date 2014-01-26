@@ -11,6 +11,7 @@ function runGame(){
 	webGLStart(modelInstance);
 	//set game looping	
 	setInterval("modelInstance.step(modelInstance)", 16);
+	// requestAnimationFrame(drawScene);
 }
 
 window.onkeydown = function(e) {
