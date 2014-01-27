@@ -1,16 +1,18 @@
 //http://learningwebgl.com/blog/?p=28  source!
-//----------------------------------------------------------------GLOBALS:
+
+//-------------------------------------------------------CONSTANTS/FIELDS:
 
 var CHOMP_DISTANCE = 0.5;
 var SCALE_FACTOR = 3.8;
-var gl;
-var shaderProgram;
 var mvMatrix = mat4.create();
 var pMatrix = mat4.create();
+var gl;
+var shaderProgram;
 var squareVertexPositionBuffer;
 var tearTexture, headTexture, jawTexture;
 var tearImage, headImage, jawImage;
 var scaledTearSize, scaledThelmaSize;
+
 
 //--------------------------------------------------------------FUNCTIONS:
 
@@ -225,7 +227,9 @@ function setMatrixUniforms() {
 }
 
 function transformTear(tear) {
-
+    // This should be done in an engine's scene graph or
+    // perhaps on the GPU
+    
     var tearPos = vec3.clone(tear.position);
 
     mat4.identity(mvMatrix);
@@ -260,5 +264,3 @@ function webGLStart(model) {
                 vec3.fromValues(0,1,0));
     mat4.mul(pMatrix, pMatrix, mvMatrix);
 }
-
-

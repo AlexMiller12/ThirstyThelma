@@ -1,0 +1,74 @@
+Questions:
+	-investigate closure a bit
+	-WebGLRenderer:
+		.sortFacesByMaterial
+		.setDepthTest/Write
+		renderObjectsImmediate vs renderObjects
+	-Where does requestAnimationFrame(scene) live?
+	-Where does immediateRenderCallback() live?
+	-DepthTest
+
+Notes:
+//------------------------General:
+	-Talk about post-effects plugins
+
+	-Face3 has a centroid (like you did it) and a material index (like I did it)
+
+	-ShaderChunk seems to hold all pre-written shaders.  
+
+	-UniformUtils has a merge function
+
+	ShaderLib selects chunks from it to assemble shaders?
+
+	-We used MVC approach
+
+
+//------------------------For Trace:
+
+	-Us to theirs:
+		-our pMatrix, in view, is represented in their Camera class
+
+
+	We need three things for threejs: A scene, camera, and renderer.
+
+	-Object3D
+		-Threejs maintains a scene graph, of course.  This is their node class
+		-id, parent, children, 
+		-rotation, scale, and translation all stored independently and reapplied each graph traversal (to avoid losing precision)
+		-nothing fancy
+
+	-Scene
+		-Extends THREE.Object3D (basic scene graph object)
+		-The root node of the scene graph
+		-Constructor:
+			-Defaults to autoupdate = true (if true, when WebGLRenderer.render is called, it will update the scene and add its objects to its to-render list)
+			-Initializes objectsAdded and objectsRemoved arrays, which will be used by WebGLRenderer.  It will go through this list and create and bind buffers so it can render them every frame.
+	-Camera
+		-Extends THREE.Object3D
+		-Maintains projectionMatrix and matrixWorldInverse and that's it
+		-We used PerspectiveCamera
+
+	-WebGLRenderer
+		-Responsible for:
+			-most GL calls
+			-maintaining geometryGroups list-
+		-When object is added to scene:
+			-addObject(obj, scene) is called
+				-will create and initialize relevant buffer
+				-different if particle system, line, mesh, or buffer geometry
+			-render()
+				-gives big picture render orders. 
+				-update scene graph, camera matricies and frustrum, update webgl objects, set matricies for regular and immediate objects, blending, makes mipmap
+			-renderObjects
+				-takes a flag to render back to front or front to back
+				-checks material, sets faces
+				-renders with buffer (by calling renderBuffer or renderBufferDirect)
+			-renderObjectsImmediate	> renderImmediateObject
+				-calls render with new function (renderBufferImmediate) or an object function immediateRenderCallback
+			-renderBufferImmediate
+				-only takes object, program, material
+				-takes the normals, uvs, colors, shader program
+				-actually has calls to bindbuffer, set vertexAttribPointer and gl.drawArrays()
+			-renderBufferDirect 
+				-actually has calls to bindbuffer, set vertexAttribPointer
+				-like Immediate but instead of program takes in camera, lights, fog, and geometry

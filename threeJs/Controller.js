@@ -1,8 +1,6 @@
 //-----------------------------------------------------------------FIELDS:
 
-var ourEngine = []; //Works as aggregator
-
-
+var ourEngine = []; // Works as aggregator, holding all would-be globals
 
 //--------------------------------------------------------------FUNCTIONS:
 /*
@@ -19,6 +17,7 @@ var init = function () {
 										0.1, //CLIP NEAR
 										1000); //CLIP FAR
 	ourEngine.camera.position.set(0,0,7);
+	
 	// Init Renderer
 	ourEngine.renderer = new THREE.WebGLRenderer();
 	ourEngine.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -43,9 +42,9 @@ var init = function () {
 var drawScene = function () {
 	// Updates the model (normally would not be called in render method)
 	ourEngine.model.step();
-	/* Called by HTML window for interacting with canvas; not a webGL call.
-	 * This tells the canvas element to call drawScene every time it wants
-	 * to render the page. */
+	/* Called by HTML window for interacting with canvas; not a webGL call. *
+	 * This tells the canvas element to call drawScene every time it wants  *
+	 * to render the page. 													*/
 	requestAnimationFrame(drawScene);
 	// Starts Three.js rendering loop
 	ourEngine.renderer.render(ourEngine.scene, ourEngine.camera);
@@ -62,5 +61,3 @@ window.onkeydown = function(e) {
 
 	ourEngine.model.moveThelma(key);
 }
-//}
-
