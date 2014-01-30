@@ -7,10 +7,11 @@ var modelInstance = {};
 function runGame(){
 	//create new game
 	modelInstance = new GameModel();
+
+	setInterval("modelInstance.step(modelInstance)", 16);
 	//init window
 	webGLStart(modelInstance);
 	//set game looping	
-	setInterval("modelInstance.step(modelInstance)", 16);
 }
 
 window.onkeydown = function(e) {

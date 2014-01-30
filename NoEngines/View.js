@@ -12,26 +12,31 @@ var squareVertexPositionBuffer;
 var tearTexture, headTexture, jawTexture;
 var tearImage, headImage, jawImage;
 var scaledTearSize, scaledThelmaSize;
-
+var model;
+var system;
 
 //--------------------------------------------------------------FUNCTIONS:
 
-function drawScene(model) {
+function drawScene() {
 
+    requestAnimationFrame(drawScene)
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     mat4.identity(mvMatrix);
-
+    updateParticleBuffer(system);
+    drawParticles(system);
+    /*
     drawThelma(model.thelma);
     drawTears(model);
+    */
 }
 function setTexture(texture){
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, texture);
 }
+
+
 function drawSquare() {
 
-   
-    
     setMatrixUniforms();
     gl.uniform1i(samplerLocation, 0); // save this to a value in the beginning
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -40,7 +45,12 @@ function drawSquare() {
                   0, 
                   squareVertexPositionBuffer.numItems);
 }
-
+function drawParticles(mySystem){
+    setMatrixUniforms();
+    gl.drawArrays(gl.POINTS, 
+                  0, 
+                  squareVertexPositionBuffer.numItems);
+}
 function drawTears(model) {
 
     var tears = model.tears;
@@ -171,35 +181,55 @@ function initShaders() {
     shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, 
                                                           "uMVMatrix");
 
+    /*
     shaderProgram.textureCoordAttribute = gl.getAttribLocation(shaderProgram, 
                                                                "aTextureCoord");
     gl.enableVertexAttribArray(shaderProgram.textureCoordAttribute);
 
-    samplerLocation = gl.getUniformLocation(shaderProgram, "uSampler")
+    samplerLocation = gl.getUniformLocation(shaderProgram, "uSampler");
+    */
 }
 
-function initBuffers() {
 
-    vertices = [
-         1.0,  1.0,  0.0,
-        -1.0,  1.0,  0.0,
-         1.0, -1.0,  0.0,
-        -1.0, -1.0,  0.0
-    ];
+function initBuffers(mySystem) {
 
+    vertices = [];
+    var i, il;
+    for(i = 0, il = mySystem.Max_Particles; i < il; i++ ){
+        var particle = mySystem.particles[i];
+        vertices.push(0.0,0.0,0.0);
+    }
     squareVertexPositionBuffer = gl.createBuffer();  
     squareVertexPositionBuffer.itemSize = 3;
-    squareVertexPositionBuffer.numItems = 4;
+    squareVertexPositionBuffer.numItems = mySystem.Max_Particles;
 
     gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexPositionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+    vert32Array = new Float32Array(vertices);
+    gl.bufferData(gl.ARRAY_BUFFER, vert32Array, gl.DYNAMIC_DRAW);
 
     gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 
                            squareVertexPositionBuffer.itemSize, 
                            gl.FLOAT, false, 0, 0);
 
 }
+function updateParticleBuffer(mySystem){
 
+    vert32Array
+    var i, il;
+    for(i = 0, il = mySystem.Max_Particles; i < il; i++){
+        var j = i * 3;
+        var particle = mySystem.particles[i];
+        vert32Array[j] = particle.position[0];
+        vert32Array[j+1] = particle.position[1];
+        vert32Array[j+2] = particle.position[2];
+    }
+    //gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexPositionBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, vert32Array, gl.DYNAMIC_DRAW);
+    gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 
+                           squareVertexPositionBuffer.itemSize, 
+                           gl.FLOAT, false, 0, 0);
+}
 function initTextures() {
 
     tearTexture = gl.createTexture();
@@ -219,13 +249,6 @@ function initTextures() {
     jawImage.src = "jaw.png";
 }
 
-function setDimensions(model) {
-
-    scaledTearSize = vec3.create();
-    scaledThelmaSize = vec3.create();
-    vec3.scale(scaledTearSize, model.tearDimension, SCALE_FACTOR);
-    vec3.scale(scaledThelmaSize, model.thelmaDimension, SCALE_FACTOR);
-}
 
 function setMatrixUniforms() {
 
@@ -253,9 +276,9 @@ function webGLStart(model) {
     var canvas = document.getElementById("glcanvas");
     initGL(canvas);
     initShaders();
-    initBuffers();
-    initTextures();
-    setDimensions(model);
+    system = model.particleSystem;
+    initBuffers(system);
+   // initTextures();
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.enable(gl.DEPTH_TEST); //set in renderObjects or renderObjectImmediate...
@@ -270,4 +293,6 @@ function webGLStart(model) {
                 vec3.fromValues(0,0,0),
                 vec3.fromValues(0,1,0));
     mat4.mul(pMatrix, pMatrix, mvMatrix);
+
+    drawScene();
 }

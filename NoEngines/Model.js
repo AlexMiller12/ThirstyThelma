@@ -11,13 +11,8 @@ var GameModel; //will be assigned constructor
 	function Model() {
 
 		this.self = this;
-	  	this.score = 0;
-		this.tears = [];
-		this.numTears = 0;
-		this.tearDimension = vec3.fromValues(0.026,0.026,0.026);
-		this.eatTimer = 0;
-		this.thelma = new ThelmaObj();
-		this.thelmaDimension = vec3.fromValues(0.18,0.18,0.18);
+	  	this.particleSystem = new ParticleSystem();
+	  	this.currentTime = 0;
 		this.gameOver = false;
 
 	}
@@ -25,19 +20,6 @@ var GameModel; //will be assigned constructor
 //----------------------------------------------------------------METHODS:
 
 	Model.prototype = {
-
-		checkForCollisions : function(){
-
-			var i;
-			for(i = 0; i < this.numTears; i++){
-				var curTear = this.tears[i];
-				var dist = vec3.distance(curTear.position,this.thelma.position);
-				if ( dist < (this.thelmaDimension[0] * 0.7)){
-					this.removeTear(i);
-					this.thelma.framesToChew = CHEW_DURATION;
-				}   
-			}
-		},
 
 		createTear : function(){
 			var randomPositionX =  -1 + (Math.random() * 2);
@@ -73,14 +55,19 @@ var GameModel; //will be assigned constructor
 			this.numTears--;
 			this.tears.splice(index,1);
 		},
-
-		step : function(self){
-			
+		updateTime : function(){
+			this.currentTime += .002;
+		},
+		step : function(time){
+			this.updateTime();
+			this.particleSystem.update(this.currentTime);
+			/*
 			this.moveTears();
 			this.checkForCollisions();
 			this.thelma.framesToChew--;
 	 		this.createTears();
-			drawScene(self);  
+			drawScene(self); 
+			*/ 
 		}
 	}
 	GameModel = Model;
