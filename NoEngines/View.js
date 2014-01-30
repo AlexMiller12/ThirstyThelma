@@ -24,19 +24,16 @@ function drawScene(model) {
     drawThelma(model.thelma);
     drawTears(model);
 }
-
-function drawSquare(texture) {
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexPositionBuffer);
-    gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 
-                           squareVertexPositionBuffer.itemSize, 
-                           gl.FLOAT, false, 0, 0);
-    
-    setMatrixUniforms();
-
+function setTexture(texture){
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.uniform1i(gl.getUniformLocation(shaderProgram, "uSampler"), 0);
+}
+function drawSquare() {
+
+   
+    
+    setMatrixUniforms();
+    gl.uniform1i(samplerLocation, 0); // save this to a value in the beginning
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.enable(gl.BLEND);
     gl.drawArrays(gl.TRIANGLE_STRIP, 
@@ -47,12 +44,13 @@ function drawSquare(texture) {
 function drawTears(model) {
 
     var tears = model.tears;
+    setTexture(tearTexture);
    
     var i;
     for (i = 0; i < model.numTears; i++) {
 
         transformTear(tears[i]);
-        drawSquare(tearTexture);
+        drawSquare();
     }
 }
 
@@ -66,7 +64,8 @@ function drawThelma(thelma) {
     mat4.translate(mvMatrix, mvMatrix, thelmaPos);
 
     //draw jaw
-    drawSquare(jawTexture);
+    setTexture(jawTexture);
+    drawSquare();
     //adjust head if eating/finished eating tear
     if (thelma.framesToChew > 0) {
         mat4.translate(mvMatrix, mvMatrix, vec3.fromValues(0, CHOMP_DISTANCE, 0));
@@ -75,7 +74,8 @@ function drawThelma(thelma) {
         mat4.translate(mvMatrix, mvMatrix, vec3.fromValues(0, -CHOMP_DISTANCE, 0));
     }
     //draw head
-    drawSquare(headTexture); 
+    setTexture(headTexture);
+    drawSquare(); 
 }
 
 /*
@@ -174,6 +174,8 @@ function initShaders() {
     shaderProgram.textureCoordAttribute = gl.getAttribLocation(shaderProgram, 
                                                                "aTextureCoord");
     gl.enableVertexAttribArray(shaderProgram.textureCoordAttribute);
+
+    samplerLocation = gl.getUniformLocation(shaderProgram, "uSampler")
 }
 
 function initBuffers() {
@@ -191,6 +193,11 @@ function initBuffers() {
 
     gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexPositionBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+    gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 
+                           squareVertexPositionBuffer.itemSize, 
+                           gl.FLOAT, false, 0, 0);
+
 }
 
 function initTextures() {

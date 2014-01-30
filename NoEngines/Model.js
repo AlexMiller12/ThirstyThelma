@@ -3,7 +3,7 @@ var GameModel; //will be assigned constructor
 (function(){
 //-------------------------------------------------------CONSTANTS/FIELDS:
 	
-	var MAX_TEARS = 90;
+	var MAX_TEARS = 2000;
 	var CHEW_DURATION = 4;
 
 //-----------------------------------------------------------CONSTRUCTORS:
