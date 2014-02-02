@@ -1,93 +1,87 @@
 //http://learningwebgl.com/blog/?p=28  source!
 
 //-------------------------------------------------------CONSTANTS/FIELDS:
-
+var canvas;
 var CHOMP_DISTANCE = 0.5;
 var SCALE_FACTOR = 3.8;
 var mvMatrix = mat4.create();
 var pMatrix = mat4.create();
 var gl;
-var shaderProgram;
-var squareVertexPositionBuffer;
-var tearTexture, headTexture, jawTexture;
-var tearImage, headImage, jawImage;
-var scaledTearSize, scaledThelmaSize;
+var particlePositionBuffer;
 var model;
 var system;
-
+var positionBufferA;
+var positionTextureA;
+var BframeBuffer;
+var Btexture;
+var counter;
+var textureSize;
+var framebuffers = [];
+var textures = [];
+var swap = true;
 //--------------------------------------------------------------FUNCTIONS:
 
 function drawScene() {
+    requestAnimationFrame(drawScene);
+    //Determine which texture will be read from and which will be written to
+    var srcIndex, destIndex;   
+    if(frameTurn){
+        srcIndex = 0;
+        destIndex = 1;
+    }
+    else{
+        srcIndex = 1;
+        destIndex = 0;
+    }
 
-    requestAnimationFrame(drawScene)
+    
+    
+    //bind our custom frame buffer
+
+    gl.useProgram(saveProgram);
+    gl.draw
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fboSave); 
+    gl.viewport(0, 0, rowLength, rowLength);
+    //set the texture to which the fboSave will save updated state
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, textures[destIndex], 0); 
+
+    //set the texture to read last state from
+   // gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, textures[srcIndex]);
+    gl.uniform1i(saveProgram.uSamplerReadsave, textures[srcIndex]);
+      
+    // disble depth testing and update the state in texture memory
+    gl.disable(gl.DEPTH_TEST);
+    gl.enableVertexAttribArray(saveProgram.vertexVelocities); 
+    gl.enableVertexAttribArray(saveProgram.vertexIndexAttribute); 
+    gl.drawArrays(gl.POINTS, 0, system.Max_Particles); 
+    
+    //debug info about the texture memory (too slow for production)
+    var pixels = new Uint8Array( rowLength * rowLength * 4);
+    gl.readPixels(0,0,rowLength,rowLength,gl.RGBA,gl.UNSIGNED_BYTE,pixels);
+    
+    gl.useProgram(renderProgram);
+    gl.viewport(0,0, gl.viewportWidth, gl.viewportHeight)
+    //update the texture to read newly written state
+    //gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, textures[destIndex]);   
+    gl.uniform1i(renderProgram.uSamplerReadrender, textures[destIndex]);
+
+    //bind the default frame buffer, enable depth testing and draw particles to the screen
+    gl.enable(gl.DEPTH_TEST);
+    gl.bindFramebuffer(gl.FRAMEBUFFER,null); //bind the default frame buffer
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    mat4.identity(mvMatrix);
-    updateParticleBuffer(system);
-    drawParticles(system);
-    /*
-    drawThelma(model.thelma);
-    drawTears(model);
-    */
+   // gl.enableVertexAttribArray(renderProgram.vertexVelocities); 
+    gl.enableVertexAttribArray(renderProgram.vertexIndexAttribute); 
+
+    gl.drawArrays(gl.POINTS, 0, system.Max_Particles); 
+
+    frameTurn = ! frameTurn;
 }
 function setTexture(texture){
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, texture);
 }
-
-
-function drawSquare() {
-
-    setMatrixUniforms();
-    gl.uniform1i(samplerLocation, 0); // save this to a value in the beginning
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.enable(gl.BLEND);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 
-                  0, 
-                  squareVertexPositionBuffer.numItems);
-}
-function drawParticles(mySystem){
-    setMatrixUniforms();
-    gl.drawArrays(gl.POINTS, 
-                  0, 
-                  squareVertexPositionBuffer.numItems);
-}
-function drawTears(model) {
-
-    var tears = model.tears;
-    setTexture(tearTexture);
-   
-    var i;
-    for (i = 0; i < model.numTears; i++) {
-
-        transformTear(tears[i]);
-        drawSquare();
-    }
-}
-
-function drawThelma(thelma) {
-    
-    var thelmaPos = vec3.clone(thelma.position);
-    mat4.identity(mvMatrix);
-    vec3.scale(thelmaPos, thelmaPos, SCALE_FACTOR);
-
-    mat4.scale(mvMatrix, mvMatrix, scaledThelmaSize); // TODO SCALE VAR
-    mat4.translate(mvMatrix, mvMatrix, thelmaPos);
-
-    //draw jaw
-    setTexture(jawTexture);
-    drawSquare();
-    //adjust head if eating/finished eating tear
-    if (thelma.framesToChew > 0) {
-        mat4.translate(mvMatrix, mvMatrix, vec3.fromValues(0, CHOMP_DISTANCE, 0));
-    }
-    else if (thelma.framesToChew === 0) {
-        mat4.translate(mvMatrix, mvMatrix, vec3.fromValues(0, -CHOMP_DISTANCE, 0));
-    }
-    //draw head
-    setTexture(headTexture);
-    drawSquare(); 
-}
-
 /*
  * gl - canvas context
  * id - DOM id of the shader
@@ -140,9 +134,16 @@ function handleTextureLoaded(image, texture) {
 
 function initGL(canvas) {
 
-    try {
 
+    try {
         gl = canvas.getContext("experimental-webgl");
+        //extension to use floating point values in textures
+        gl.getExtension("OES_texture_float");  
+        //extension allowing us to write to more than one buffer per render Pass
+        ext = gl.getExtension("WEBGL_draw_buffers"); 
+        if(! ext){
+            alert("no Extension noob LOL");
+        }
         gl.viewportWidth = canvas.width;
         gl.viewportHeight = canvas.height;
     } 
@@ -155,11 +156,9 @@ function initGL(canvas) {
         alert("Could not initialise WebGL, sorry :-(");
     }
 }
-
-function initShaders() {
-
-    var fragmentShader = getShader(gl, "shader-fs");
-    var vertexShader = getShader(gl, "shader-vs");
+function createProgram(fragName, vertName){
+    var fragmentShader = getShader(gl, fragName);
+    var vertexShader = getShader(gl, vertName);
 
     shaderProgram = gl.createProgram();
     gl.attachShader(shaderProgram, vertexShader);
@@ -167,69 +166,126 @@ function initShaders() {
     gl.linkProgram(shaderProgram);
 
     if (! gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
-        alert("Could not initialise shaders");
+        alert("failed to initialize shaders");
     }
+    return shaderProgram;
+}
+function initShaders() {
 
-    gl.useProgram(shaderProgram);
+    renderProgram = createProgram("fragment-render","vertex-render");
+    
+    gl.useProgram(renderProgram);
 
-    shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, 
-                                                                 "aVertexPosition");
-    gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+    renderProgram.vertexIndexAttribute = gl.getAttribLocation(renderProgram,"aVertexIndex");
 
-    shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, 
-                                                         "uPMatrix");
-    shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, 
-                                                          "uMVMatrix");
+    renderProgram.pMatrixUniform = gl.getUniformLocation(renderProgram, "uPMatrix");
 
-    /*
-    shaderProgram.textureCoordAttribute = gl.getAttribLocation(shaderProgram, 
-                                                               "aTextureCoord");
-    gl.enableVertexAttribArray(shaderProgram.textureCoordAttribute);
+    renderProgram.mvMatrixUniform = gl.getUniformLocation(renderProgram,  "uMVMatrix");
 
-    samplerLocation = gl.getUniformLocation(shaderProgram, "uSampler");
-    */
+    renderProgram.uSamplerReadrender = gl.getUniformLocation(renderProgram, "uSamplerRead");
+
+   // renderProgram.resolutionUniform = gl.getUniformLocation(renderProgram, "uResolution");
+
+    //////////////////////////////////////////////////////////////////
+
+    saveProgram = createProgram("fragment-save","vertex-save");
+    
+    gl.useProgram(saveProgram);
+
+    saveProgram.vertexVelocities = gl.getAttribLocation(saveProgram,"aVertexVelocities");
+    
+    saveProgram.vertexIndexAttribute = gl.getAttribLocation(saveProgram,"aVertexIndex");
+       
+    saveProgram.uSamplerReadsave = gl.getUniformLocation(saveProgram, "uSamplerRead");
+        
+//    saveProgram.resolutionUniform = gl.getUniformLocation(saveProgram, "uResolution");
+   
 }
 
 
+/*
+ * Boolean useVetexShader 
+ */
+function createBuffer(itemSize, numItems, content, locationRender, locationSave) {
+
+    var newBuffer = gl.createBuffer();  
+    newBuffer.itemSize = itemSize;
+    newBuffer.numItems = numItems;
+    gl.bindBuffer(gl.ARRAY_BUFFER, newBuffer);
+    var vert32Array = new Float32Array(content);
+    gl.bufferData(gl.ARRAY_BUFFER, vert32Array, gl.STATIC_DRAW);
+    gl.vertexAttribPointer(locationRender, itemSize, gl.FLOAT, false, 0, 0);  
+    gl.vertexAttribPointer(locationSave, itemSize, gl.FLOAT, false, 0, 0);
+   // gl.enableVertexAttribArray(locationSave);   
+
+}
+ 
 function initBuffers(mySystem) {
+    setMatrixUniforms();
+  //  gl.uniform1f(renderProgram.resolutionUniform, mySystem.Max_Particles);
+    // gl.uniform1f(saveProgram.resolutionUniform, mySystem.Max_Particles);
 
-    vertices = [];
-    var i, il;
-    for(i = 0, il = mySystem.Max_Particles; i < il; i++ ){
+    var indices = []; // array that will hold the index of each particle
+    var particleVelocities = []; // declare array that will hold current xyz velocity + life
+    var i, numParticles;
+    numParticles = mySystem.Max_Particles;
+    rowLength = Math.floor(Math.sqrt(mySystem.Max_Particles));
+
+    for (i = 0; i < numParticles; i++ ) { // and fill it
+        var xindex = 2.0 * ((Math.floor(i % rowLength)) / rowLength ) -1.0;
+        var yindex = 2.0 * (i / numParticles) -1.0; //i +  (Math.floor(i % rowLength) -1.0);
+        //xindex = yindex;
         var particle = mySystem.particles[i];
-        vertices.push(0.0,0.0,0.0);
+        particleVelocities.push(particle.v0[0]);
+        particleVelocities.push(particle.v0[1]);
+        particleVelocities.push(particle.v0[2]);
+        indices.push(xindex);
+        indices.push(yindex);
     }
-    squareVertexPositionBuffer = gl.createBuffer();  
-    squareVertexPositionBuffer.itemSize = 3;
-    squareVertexPositionBuffer.numItems = mySystem.Max_Particles;
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexPositionBuffer);
+    createBuffer(3, //item size
+                 mySystem.Max_Particles, //num items
+                 particleVelocities, //data
+                 renderProgram.vertexVelocities,saveProgram.vertexVelocities); //location
 
-    vert32Array = new Float32Array(vertices);
-    gl.bufferData(gl.ARRAY_BUFFER, vert32Array, gl.DYNAMIC_DRAW);
+    createBuffer(2, //item size
+                 mySystem.Max_Particles, //num items
+                 indices, //data
+                 renderProgram.vertexIndexAttribute,saveProgram.vertexIndexAttribute); //location
 
-    gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 
-                           squareVertexPositionBuffer.itemSize, 
-                           gl.FLOAT, false, 0, 0);
+    
+    textures = [];
+   // textures.push(generateTexture());
+    textures.push(generateTexture());
+    textures.push(generateTexture());
 
+    fboSave = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER,fboSave);
+    fboSave.width = rowLength;
+    fboSave.height = rowLength;
+  
 }
-function updateParticleBuffer(mySystem){
 
-    vert32Array
-    var i, il;
-    for(i = 0, il = mySystem.Max_Particles; i < il; i++){
-        var j = i * 3;
-        var particle = mySystem.particles[i];
-        vert32Array[j] = particle.position[0];
-        vert32Array[j+1] = particle.position[1];
-        vert32Array[j+2] = particle.position[2];
-    }
-    //gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexPositionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, vert32Array, gl.DYNAMIC_DRAW);
-    gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 
-                           squareVertexPositionBuffer.itemSize, 
-                           gl.FLOAT, false, 0, 0);
+function generateTexture(){
+    /*var colors = [1.0,0.0,0.0,1.0,
+                  0.0,1.0,0.0,1.0,
+                  0.5,0.0,0.0,1.0,
+                  0.0,0.0,1.0,1.0];
+    */
+    var texture = gl.createTexture();
+
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA,
+                    rowLength,
+                    rowLength, 0, gl.RGBA, gl.FLOAT, null);//new Float32Array(colors));
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    return texture;
 }
+
 function initTextures() {
 
     tearTexture = gl.createTexture();
@@ -251,37 +307,24 @@ function initTextures() {
 
 
 function setMatrixUniforms() {
-
-    gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
-    gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
-}
-
-function transformTear(tear) {
-    // This should be done in an engine's scene graph or
-    // perhaps on the GPU
-    
-    var tearPos = vec3.clone(tear.position);
-
-    mat4.identity(mvMatrix);
-    vec3.scale(tearPos,tearPos,SCALE_FACTOR);
-    
-    mat4.rotate(mvMatrix, mvMatrix, tear.rotation * Math.PI / 180, vec3.fromValues(0,1,0))
-    mat4.rotate(mvMatrix, mvMatrix, tear.rotation, vec3.fromValues(0,1,0))        
-    mat4.scale(mvMatrix, mvMatrix, scaledTearSize); 
-    mat4.translate(mvMatrix, mvMatrix, tearPos);
+    gl.useProgram(renderProgram);
+    gl.uniformMatrix4fv(renderProgram.pMatrixUniform, false, pMatrix);
+    gl.uniformMatrix4fv(renderProgram.mvMatrixUniform, false, mvMatrix);
 }
 
 function webGLStart(model) {
+    frameTurn = true;
 
-    var canvas = document.getElementById("glcanvas");
+    canvas = document.getElementById("glcanvas");
     initGL(canvas);
     initShaders();
     system = model.particleSystem;
+    textureSize = system.Max_Particles;
     initBuffers(system);
    // initTextures();
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
-    gl.enable(gl.DEPTH_TEST); //set in renderObjects or renderObjectImmediate...
+    
 
     // This is work for a Camera class!
     gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
@@ -293,6 +336,6 @@ function webGLStart(model) {
                 vec3.fromValues(0,0,0),
                 vec3.fromValues(0,1,0));
     mat4.mul(pMatrix, pMatrix, mvMatrix);
-
+    setMatrixUniforms();
     drawScene();
 }

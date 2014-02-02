@@ -7,10 +7,10 @@ var Particle = [];
 
 //------------------------------------------------------CONSTRUCTORS:
 
-	function particle(initial){
+	function particle(initialVelocity){
 		this.position = [0,0,0];
 		this.acceleration = [0,-9.8,0];
-		this.v0 = initial
+		this.v0 = initialVelocity;
 		this.life = 0.0;
 		this.lifeSpan = Math.random() * 10;
 		this.output = vec3.create();

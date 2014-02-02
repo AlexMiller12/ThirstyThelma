@@ -1,0 +1,3 @@
+using gl_tex2d instead of vertex buffers to pass particle data to shaders because transform feedback is not available yet in webGL
+
+we plan to transfer the initial state of our system to the gpu and then do all calculations there.
